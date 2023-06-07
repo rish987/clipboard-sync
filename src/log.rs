@@ -16,10 +16,7 @@ pub enum Level {
 
 impl Default for Level {
     fn default() -> Self {
-        #[cfg(debug_assertions)]
         return Level::Debug;
-        #[cfg(not(debug_assertions))]
-        Level::Info
     }
 }
 

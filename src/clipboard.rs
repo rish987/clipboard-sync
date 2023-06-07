@@ -8,6 +8,7 @@ use wl_clipboard_rs::paste::{
 };
 
 use crate::error::{Generify, MyResult, Standardize};
+use crate::log;
 
 pub trait Clipboard: std::fmt::Debug {
     fn display(&self) -> String;
@@ -51,38 +52,15 @@ impl Clipboard for WlrClipboard {
 
     fn get(&self) -> MyResult<String> {
         env::set_var("WAYLAND_DISPLAY", self.display.clone());
-        let result = get_contents(
-            ClipboardType::Regular,
-            Seat::Unspecified,
-            PasteMimeType::Text,
-        );
-
-        match result {
-            Ok((mut pipe, _)) => {
-                let mut contents = vec![];
-                pipe.read_to_end(&mut contents)?;
-                Ok(String::from_utf8_lossy(&contents).to_string())
-            }
-
-            Err(PasteError::NoSeats)
-            | Err(PasteError::ClipboardEmpty)
-            | Err(PasteError::NoMimeType) => Ok("".to_string()),
-
-            Err(err) => Err(err)?,
-        }
+        let out = Command::new("wl-paste").output()?.stdout;
+        Ok(String::from_utf8_lossy(&out).trim().to_string())
     }
 
     fn set(&self, value: &str) -> MyResult<()> {
         env::set_var("WAYLAND_DISPLAY", self.display.clone());
-        let opts = Options::new();
-        let result = std::panic::catch_unwind(|| {
-            opts.copy(
-                Source::Bytes(value.to_string().into_bytes().into()),
-                CopyMimeType::Text,
-            )
-        });
+        Command::new("wl-copy").arg(value).spawn()?;
 
-        Ok(result.standardize().generify()??)
+        Ok(())
     }
 }
 

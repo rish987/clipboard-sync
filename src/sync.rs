@@ -1,6 +1,7 @@
 use chrono::Local;
+use std::path::Path;
 use std::collections::HashSet;
-use std::{thread::sleep, time::Duration};
+use std::{thread::sleep, time::Duration, env};
 use wayland_client::ConnectError;
 use wl_clipboard_rs::paste::Error as PasteError;
 
@@ -12,7 +13,7 @@ pub fn get_clipboards() -> MyResult<Vec<Box<dyn Clipboard>>> {
     log::debug!("identifying unique clipboards...");
     let mut clipboards = get_clipboards_spec(get_wayland);
     // let x11_backend = X11Backend::new()?;
-    clipboards.extend(get_clipboards_spec(get_x11));
+    //clipboards.extend(get_clipboards_spec(get_x11));
 
     let start = clipboards
         .iter()
@@ -60,6 +61,7 @@ pub fn keep_synced(clipboards: &Vec<Box<dyn Clipboard>>) -> MyResult<()> {
     loop {
         sleep(Duration::from_millis(100));
         let new_value = await_change(clipboards)?;
+        log::info!("syncing... {}", new_value);
         for c in clipboards {
             c.set(&new_value)?;
         }
@@ -196,6 +198,17 @@ fn get_wayland(n: u8) -> MyResult<Option<Box<dyn Clipboard>>> {
     let clipboard = WlrClipboard {
         display: wl_display.clone(),
     };
+
+    let sock_dir = env::var("XDG_RUNTIME_DIR");
+    let sock = Path::new(&sock_dir.unwrap()).join(wl_display.clone()); // TODO error handling
+    if !sock.exists() {
+        // log::info!("clipboard does not exist: {}", wl_display);
+        return Ok(None);
+    }
+    {
+        // log::info!("clipboard found: {}", wl_display);
+    }
+
     let attempt = clipboard.get();
     if let Err(MyError::WlcrsPaste(PasteError::WaylandConnection(
         ConnectError::NoCompositorListening,
