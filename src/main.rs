@@ -115,12 +115,6 @@ fn get_clipboard(n: u8) -> MyResult<Option<Box<dyn Clipboard>>> {
         display: wl_display.clone(),
     };
     let attempt = clipboard.get();
-    if let Err(MyError::WlcrsPaste(PasteError::WaylandConnection(
-        ConnectError::NoCompositorListening,
-    ))) = attempt
-    {
-        return Ok(None);
-    }
     if let Err(MyError::WlcrsPaste(PasteError::MissingProtocol {
         name: "zwlr_data_control_manager_v1",
         version: 1,
